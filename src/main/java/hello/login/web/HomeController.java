@@ -2,6 +2,7 @@ package hello.login.web;
 
 import hello.login.domain.member.Member;
 import hello.login.domain.member.MemberRepository;
+import hello.login.web.session.SessionManager;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,12 +21,13 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class HomeController {
     private final MemberRepository memberRepository;
+    private final SessionManager sessionManager;
 
 //    @GetMapping("/")
     public String home(){return "home";}
 
-    @GetMapping("/")
-    public String homeLogin(@CookieValue(name = "memberId", required = false) Long memberId, Model model){
+    //@GetMapping("/") 쿠키를 이용한 v1
+    public String homeLoginV1(@CookieValue(name = "memberId", required = false) Long memberId, Model model){
         if(memberId==null) {
             return "home";
         }
@@ -39,18 +41,18 @@ public class HomeController {
         return "loginHome";
     }
 
-    @PostMapping("/logout")
-    public String logout(HttpServletResponse response){
-        //쿠키를 지우는 방법은, 쿠키를 찾아내서 setMaxAge = 0 하는게 아니라
-        //새로 덮어 씌워버리고(map) setMaxAge = 0.
-        //즉 그 쿠키를 찾는 과정이 없음.
-        expireCookie(response, "memberId");
-        return "redirect:/";
-    }
-
-    private void expireCookie(HttpServletResponse response, String cookieName) {
-        Cookie newCookie = new Cookie("memberId", null);
-        newCookie.setMaxAge(0);
-        response.addCookie(newCookie);
+    @GetMapping("/") //세션을 이용하는 v2
+    public String homeLoginV2(HttpServletRequest request, Model model){
+        //세션 관리자에 저장된 회원 정보를 조회.
+        Member sessionMember = (Member) sessionManager.getSession(request);
+        if(sessionMember == null) {
+            return "home";
+        }
+//        Member loginMember = memberRepository.findById(sessionMember.getId());
+//        if(loginMember == null) {
+//            return "home";
+//        } //이 로직마저 필요 없음.
+        model.addAttribute("member", sessionMember);
+        return "loginHome";
     }
 }
